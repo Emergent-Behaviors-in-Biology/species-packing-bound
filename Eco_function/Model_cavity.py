@@ -48,6 +48,7 @@ class Cavity_simulation(object):
 		self.energies = self.deltaE*np.ones(self.M)
 		if self.parameters.get('tau_inv')==None:
 			self.tau_inv = np.ones(self.M)
+			self.parameters['tau_inv']=1
 		else: 
 			self.tau_inv = self.parameters['tau_inv']*np.ones(self.M)
 		#################################
