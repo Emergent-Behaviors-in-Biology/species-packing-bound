@@ -26,19 +26,21 @@ from multiprocessing import Pool
 import multiprocessing 
 import argparse
 parser = argparse.ArgumentParser(description='Process types and dynamics')
-parser.add_argument('--B', default='null')
-parser.add_argument('--C', default='gaussian')
-parser.add_argument('--d', default='quadratic')
-parser.add_argument('--s', default='CVXOPT')
+parser.add_argument('--B', default='null', choices=['block', 'null', 'circulant','identity'])
+parser.add_argument('--C', default='gaussian', choices=['gaussian','binomial', 'uniform'])
+parser.add_argument('--d', default='quadratic', choices=['linear','quadratic', 'crossfeeding'])
+parser.add_argument('--s', default='CVXOPT', choices=['ODE', 'CVXOPT'])
+parser.add_argument('--m', default='null', choices=['null','add', 'scale', 'power']) # 'add', 'power', 'null'
 args = parser.parse_args()
-dynamics=  args.d #'quadratic', 'linear','crossfeeding'
-B_type = args.B   #'identity', 'null', 'circulant' and 'block'
-C_type = args.C   #'gaussian',‘binomial'
-Simulation_type=args.s # 'ODE', 'CVXOPT'
+dynamics=  args.d 
+B_type = args.B   
+C_type = args.C  
+Simulation_type=args.s 
+Metabolic_Tradeoff_type=args.m
 
 start_time = time.time()
-Pool_num=28
-file_name='Community_'+C_type+'_'+B_type +'_'+dynamics+'_'+Simulation_type+'_log_sigc_1.csv'
+Pool_num=15
+file_name='Community_'+C_type+'_'+B_type +'_'+dynamics+'_'+Simulation_type+'_'+Metabolic_Tradeoff_type+'_log_sigc_1.csv'
 
 parameters = {}
 parameters['sample_size']=10;
@@ -96,7 +98,7 @@ def func_parallel(para):
 	elif B_type=='null':
 		Model.B_type='null'
 		Model.mu=mu
-		Model.sigma_c=epsilon
+		Model.epsilon=epsilon
 	elif B_type=='circulant':
 		Model.B_type='circulant'
 		Model.mu=mu
@@ -108,8 +110,8 @@ def func_parallel(para):
 	if C_type=='binomial':
 		Model.C_type='binomial'
 		Model.p_c=epsilon
-		Model.mu = para[14]
-		Model.epsilon = para[13]
+		Model.mu = mu
+		Model.epsilon= epsilon
 	elif C_type=='gamma':
 		Model.C_type='gamma'
 		Model.mu=mu
@@ -122,6 +124,13 @@ def func_parallel(para):
 		Model.C_type='uniform'
 		Model.mu=mu
 		Model.epsilon=epsilon
+	if Metabolic_Tradeoff_type!='null':  # 'scale', 'add', 'power'
+		Model.Metabolic_Tradeoff=True
+		Model.Metabolic_Tradeoff_type=Metabolic_Tradeoff_type
+		Model.mu=mu
+		Model.epsilon=0.1
+		Model.p_c=0.1
+		Model.epsilon_Metabolic=epsilon # noise amplitude for soft metabolic trade-off
 	if dynamics=='linear': #'quadratic' 'linear'
 		mean_var=Model.ode_simulation(Dynamics=dynamics,Simulation_type=Simulation_type)
 	elif dynamics=='quadratic': #'quadratic' 'linear'
@@ -137,29 +146,35 @@ def func_parallel(para):
 	mean_var['mu']=mu
 	mean_var['M']=para[2];
 	mean_var['S']=para[1]
-	mean_var['epsilon']=epsilon
+	mean_var['epsilon']=Model.epsilon
 	mean_var['sample_size']=parameter['sample_size']
+	mean_var['epsilon_Metabolic']=Model.epsilon_Metabolic
 	index = [0]
 	para_df = pd.DataFrame(mean_var, index=index)
+
+
+	filename='abundance'+'K_'+str(parameter['K'])+'Sigc_'+str(round(epsilon,3))+Simulation_type+Metabolic_Tradeoff_type+'.pkl'
+	with open(filename, 'wb') as f:  
+   		 pickle.dump((Model.R_org, Model.N_org, Model.packing, Model.lams ), f)
 	return para_df
 
 jobs=[];
 for S in [100]:
-	parameters['S'] =S;
+	parameters['S'] =5*S;
 	parameters['M'] =S
-	parameters['sample_size']=int(100*5000/S);
+	parameters['sample_size']=int(100*1000/S);
 	#for mu in np.append(0,np.logspace(-3.0, 2., num=10)):
 	#for mu in [0, 0.6, 1.0, 3.0, 5.0, 8.0, 10.0]:
 	mu=1.0
 	w=1.
-	for K in [1., 5., 10.]:  
+	for K in [10.]:  
 		parameters['tau_inv']=w
 		parameters['w']=w
 		parameters['K']=K/parameters['tau_inv']
 		parameters['sigma_K']=0.1/np.sqrt(parameters['tau_inv'])
-		for epsilon in np.arange(0.0, 20.1, 0.05):    
-			#for epsilon in np.linspace(0.0, 2.0, num=201): 
-				jobs.append([parameters['sample_size'],parameters['S'],parameters['M'],parameters['K'],parameters['sigma_K'], parameters['mu'], parameters['sigma_c'],parameters['m'],parameters['sigma_m'],parameters['loop_size'],parameters['t0'],parameters['t1'],parameters['Nt']  ,epsilon, mu, 0,  parameters['w']])
+		ranges=np.logspace(-6.0, -0.5, num=15)# np.arange(0.0, 20.1, 0.05):    
+		for epsilon in ranges: 
+			jobs.append([parameters['sample_size'],parameters['S'],parameters['M'],parameters['K'],parameters['sigma_K'], parameters['mu'], parameters['sigma_c'],parameters['m'],parameters['sigma_m'],parameters['loop_size'],parameters['t0'],parameters['t1'],parameters['Nt']  ,epsilon, mu, 0,  parameters['w']])
 pool = Pool(processes=Pool_num)
 results = pool.map(func_parallel, jobs)
 pool.close()
