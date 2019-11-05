@@ -40,7 +40,7 @@ Metabolic_Tradeoff_type=args.m
 
 start_time = time.time()
 Pool_num=15
-file_name='Community_'+C_type+'_'+B_type +'_'+dynamics+'_'+Simulation_type+'_'+Metabolic_Tradeoff_type+'_log_sigc_1.csv'
+file_name='Community_'+C_type+'_'+B_type +'_'+dynamics+'_'+Simulation_type+'_'+Metabolic_Tradeoff_type+'_linear_sigc_1.csv'
 
 parameters = {}
 parameters['sample_size']=10;
@@ -172,7 +172,8 @@ for S in [100]:
 		parameters['w']=w
 		parameters['K']=K/parameters['tau_inv']
 		parameters['sigma_K']=0.1/np.sqrt(parameters['tau_inv'])
-		ranges=np.logspace(-6.0, -0.5, num=15)# np.arange(0.0, 20.1, 0.05):    
+		ranges=np.logspace(-6.0, -0.5, num=15)# 
+		ranges=np.arange(0.0, 0.3, 0.01)   
 		for epsilon in ranges: 
 			jobs.append([parameters['sample_size'],parameters['S'],parameters['M'],parameters['K'],parameters['sigma_K'], parameters['mu'], parameters['sigma_c'],parameters['m'],parameters['sigma_m'],parameters['loop_size'],parameters['t0'],parameters['t1'],parameters['Nt']  ,epsilon, mu, 0,  parameters['w']])
 pool = Pool(processes=Pool_num)

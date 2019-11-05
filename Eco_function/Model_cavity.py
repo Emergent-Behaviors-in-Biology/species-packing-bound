@@ -309,7 +309,7 @@ class Cavity_simulation(object):
 		self.mean_var_simulation['q_N_s']=np.var(N_survive_list)+np.mean(N_survive_list)**2
 		self.mean_var_simulation['q_Growth']=self.var_Grow+self.mean_Grow**2
 		self.mean_var_simulation['Survive']=np.mean(Survive_list)
-		self.mean_var_simulation['Survive_bar']=np.std(Survive_list)
+		self.mean_var_simulation['Survive_bar']=np.nanstd(Survive_list)
 		self.mean_var_simulation['phi_R_bar']=np.std(phi_R_list)
 		self.mean_var_simulation['phi_N_bar']=np.std(phi_N_list)
 		self.mean_var_simulation['mean_R_bar']=np.std(R_list_bar)
